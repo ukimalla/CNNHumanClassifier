@@ -1,5 +1,5 @@
-import scipy.io as sio
-import codecs, json
+import codecs
+import json
 
 f = codecs.open('data.json', 'r', 'utf-8-sig')
 data = json.load(f)
