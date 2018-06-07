@@ -1,2 +1,5 @@
 ﻿*.json
 *.xml
+*.npz
+*.h5
+.cache
