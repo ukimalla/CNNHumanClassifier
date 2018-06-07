@@ -1,5 +1,4 @@
 import keras
-from keras.datasets import mnist
 from keras.models import Model
 from keras.layers import Input, Dense, Dropout, Flatten, concatenate
 from keras.layers import Conv2D, MaxPooling2D
@@ -7,9 +6,11 @@ import numpy as np
 
 
 if __name__ == "__main__":
+    learning_rate = 0.001
     batch_size = 128
     num_classes = 2
     epochs = 3
+
 
     # input image dimensions
     img_rows, img_cols, channels = 64, 64, 3
@@ -31,6 +32,11 @@ if __name__ == "__main__":
     x_validation = x[2]
     y_validation = y[2]
 
+    print("x_train count : " + str(len(x_train)))
+    print("y_train count : " + str(len(y_train)))
+    print("x_test count : " + str(len(x_test)))
+    print("y_test count : " + str(len(y_test)))
+
     x_train = x_train.astype('float32')
     x_test = x_test.astype('float32')
     x_validation = x_validation.astype('float32')
@@ -39,45 +45,37 @@ if __name__ == "__main__":
     y_test = y_test.astype('float32')
     y_validation = y_validation.astype('float32')
 
+
+
     print("train count : " + str(x_train.shape[0]))
     print("test count : " + str(x_test.shape[0]))
     print("validation count : " + str(x_validation.shape[0]))
 
-    '''
-    model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3),
-                     activation='relu',
-                     input_shape=input_shape))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(128, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(num_classes, activation='softmax'))
-    
-    '''
 
-    inputs = Input(shape=(64, 64, 3))
+
+    inputs = Input(shape=(img_rows, img_cols, 3))
     x = Conv2D(32, kernel_size=(3, 3),
-               activation='relu',
-               input_shape=input_shape)(inputs)
-    x = Conv2D(64, (3, 3), activation='relu')(x)
+                     activation='relu',
+                     input_shape=input_shape)(inputs)
     x = MaxPooling2D(pool_size=(2, 2))(x)
     x = Dropout(0.25)(x)
+    x = Conv2D(64, (3, 3), activation='relu')(x)
+    x = MaxPooling2D(pool_size=(2, 2))(x)
     x = Flatten()(x)
-    x = Dense(128, activation='relu')(x)
+    x = Dense(1000, activation='relu')(x)
     x = Dropout(0.5)(x)
 
-    predictions1 = Dense(1, activation='relu')(x)
+    predictions1 = Dense(1, activation='linear')(x)
     predictions2 = Dense(1, activation='sigmoid')(x)
 
     predictions = concatenate([predictions1, predictions2])
 
     model = Model(inputs=inputs, outputs=predictions)
 
+    optimizer = keras.optimizers.Adam(lr=learning_rate)
+
     model.compile(loss='mse',
-                  optimizer=keras.optimizers.Adam(),
+                  optimizer=optimizer,
                   metrics=['accuracy'])
 
     model.fit(x_train, y_train,
@@ -89,4 +87,4 @@ if __name__ == "__main__":
     print('Validation Sample loss:', score[0])
     print('Validation Sample accuracy:', score[1])
 
-    model.save('minisample3000_trained_cnn.h5')
+    model.save('train1.h5')
