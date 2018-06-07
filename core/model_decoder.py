@@ -1,6 +1,5 @@
 import tensorflow as tf
 from .interface.decoder import Decoder
-from .interface.decoder import MultiDecoder
 from tensorflow.python.framework.ops import Tensor
 import numpy as np
 from numpy import ndarray
@@ -31,23 +30,40 @@ class DataDecoder(Decoder):
         self.img_dec = ImageDecoder(img_path)
         self.limit = limit
         self.random = random_sampling
+        self.data = None
 
     def decode(self, json_file: str) -> (ndarray, ndarray):
-        f = codecs.open(json_file, 'r', 'utf-8-sig')
-        data = json.load(f)
-        f.close()
-        json_data = data["data"]
+        self.get_data_from_json(json_file)
         x_label = []
         y_label = []
         if self.random:
-            random.shuffle(json_data)
+            random.shuffle(self.data)
         start = time.time()
         for i in range(0, self.limit):
-            x_label.append(self.img_dec.decode(json_data[i]['path']))
-            y_label.append([json_data[i]['age'], json_data[i]['gender']])
+            x, y = self._decode(i)
+            x_label.append(x)
+            y_label.append(y)
             if i % 100 == 0:
                 print("progress : " + str(i/self.limit * 100) + "%")
         print("progress : 100%")
         end = time.time()
         print("elapsed time : " + str(end - start))
         return np.array(x_label), np.array(y_label)
+
+    def _decode(self, i: int) -> ('x', 'y'):
+        return self.img_dec.decode(self.data[i]['path']), [self.data[i]['age'], self.data[i]['gender']]
+
+    def decode_with_target(self, json_file: str, index: int) -> (ndarray, ndarray):
+        self.get_data_from_json(json_file)
+        return self._decode(index)
+
+    def get_data_from_json(self, json_file:str):
+        if self.data is None:
+            f = codecs.open(json_file, 'r', 'utf-8-sig')
+            data = json.load(f)
+            f.close()
+            self.data = data['data']
+        else:
+            pass
+
+
