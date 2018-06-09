@@ -1,16 +1,22 @@
-import codecs
-import json
+import numpy as np
 
-f = codecs.open('data.json', 'r', 'utf-8-sig')
-data = json.load(f)
-f.close()
+test_ratio = 0.2
+validation_ratio = 0.05
 
+data = np.load("D:/sample/data80000_part0.npz")
+x = data['x']
+y = data['y']
 
-for d in data["data"]:
-    print("index : " + str(d["index"]))
-    print("path : " + str(d["path"]))
-    print("name : " + str(d["name"]))
-    print("gender : " + str(d["gender"]))
-    print("age : " + str(d["age"]))
-    print("face_location : " + str(d["face_location"]))
-    print("\n")
+_test_dataindex = int((1-test_ratio)*len(x))
+_validation_dataindex = int((1-validation_ratio)*len(x))
+
+x_train = x[:_test_dataindex]
+y_train = y[:_test_dataindex]
+x_test = x[_test_dataindex:_validation_dataindex]
+y_test = y[_test_dataindex:_validation_dataindex]
+x_validation = x[_validation_dataindex:]
+y_validation = y[_validation_dataindex:]
+
+print(str(len(x_train)))
+print(str(len(x_test)))
+print(str(len(x_validation)))

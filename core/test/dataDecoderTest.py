@@ -6,9 +6,9 @@ import numpy as np
 
 class DataDecoderTest(unittest.TestCase):
     def test_decoder(self):
-        data_decoder = DataDecoder("D:/datalist/imdb_crop/", 3000, True)
+        data_decoder = DataDecoder("I:/datalist/imdb_crop/", 3000, True, seed=123456, start_index=0)
         x, y = data_decoder.decode("data.json")
-        np.savez_compressed("./minisample3000.npz", x=x, y=y)
+        np.savez_compressed("D:\sample\minisample3000.npz", x=x, y=y)
         npz_file = np.load("./minisample3000.npz")
         self.assertEqual(len(npz_file['x']), 3000)
 

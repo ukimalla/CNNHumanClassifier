@@ -41,6 +41,8 @@ def main():
         dob = int(data[0][0][i])
         photo_taken = int(data[1][0][i])
         age_INFO = get_age(dob, photo_taken)
+        if age_INFO <= 0:
+            continue
         path_INFO = data[2][0][i][0]
         name_INFO = data[4][0][i][0]
         face_location_INFO = process_face_location(data[5][0][i][0])

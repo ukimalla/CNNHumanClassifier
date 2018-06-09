@@ -16,39 +16,51 @@ class ImageDecoder(Decoder):
         self.path = path
         self.width = width
         self.height = height
-        self.sess = tf.Session()
+        self.sess = tf.Session(config=tf.ConfigProto(log_device_placement=False))
+        self.feed_input = tf.placeholder(tf.string)
+        self.processor = tf.read_file(self.feed_input)
+        self.processor = tf.image.decode_jpeg(self.processor, self.channel, self.ratio)
+        self.processor = tf.image.resize_images(self.processor, [self.height, self.width])
 
     def decode(self, img_path: str) -> ndarray:
         path = self.path + img_path
-        reader = tf.read_file(path)
-        image = tf.image.decode_jpeg(reader, self.channel, self.ratio)
-        return tf.image.resize_images(image, [self.height, self.width]).eval(session=self.sess)
+        return self.sess.run(self.processor, feed_dict={self.feed_input: path})
 
 
 class DataDecoder(Decoder):
-    def __init__(self, img_path: str, limit=391197, random_sampling: bool=True):
-        self.img_dec = ImageDecoder(img_path)
+    def __init__(self, img_path: str, limit=390861, random_sampling: bool=True, start_index: int = 0, seed: int = -1):
         self.limit = limit
+        self.start = start_index
+        if self.start+self.limit>390861:
+            self.limit = 390861-self.start
         self.random = random_sampling
+        self.seed = seed
         self.data = None
+        self.img_dec = ImageDecoder(img_path)
+        self.x_label = []
+        self.y_label = []
 
     def decode(self, json_file: str) -> (ndarray, ndarray):
         self.get_data_from_json(json_file)
-        x_label = []
-        y_label = []
+        self.clear_label()
         if self.random:
-            random.shuffle(self.data)
+            if self.seed == -1:
+                random.shuffle(self.data)
+            else:
+                random.Random(self.seed).shuffle(self.data)
+        print("start from " + str(self.start) + " to " + str(self.start+self.limit))
         start = time.time()
-        for i in range(0, self.limit):
+        for i in range(self.start, self.start+self.limit):
             x, y = self._decode(i)
-            x_label.append(x)
-            y_label.append(y)
-            if i % 100 == 0:
-                print("progress : " + str(i/self.limit * 100) + "%")
+            self.x_label.append(x)
+            self.y_label.append(y)
+            if (i-self.start) % 100 == 0:
+                print("progress : " + str((i-self.start)/self.limit * 100) + "%")
         print("progress : 100%")
         end = time.time()
         print("elapsed time : " + str(end - start))
-        return np.array(x_label), np.array(y_label)
+        self.x_label, self.y_label = np.array(self.x_label), np.array(self.y_label)
+        return self.x_label, self.y_label
 
     def _decode(self, i: int) -> ('x', 'y'):
         return self.img_dec.decode(self.data[i]['path']), [self.data[i]['age'], self.data[i]['gender']]
@@ -65,5 +77,11 @@ class DataDecoder(Decoder):
             self.data = data['data']
         else:
             pass
+
+    def clear_label(self):
+        del self.x_label
+        del self.y_label
+        self.x_label = []
+        self.y_label = []
 
 
