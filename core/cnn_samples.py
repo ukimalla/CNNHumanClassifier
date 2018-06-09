@@ -19,17 +19,17 @@ if __name__ == "__main__":
     input_shape = (img_cols, img_rows, channels)
 
     # Loading input data
-    data = np.load("./minisample3000.npz")
+    data = np.load("/Users/ukimalla/Downloads/data390861_part0.npz")
     X = data['x']
     y = data['y']
+    len(y)
+
+
+
 
     # Train test
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-
-
-    X = np.split(X, [2400, 2900])
-    y = np.split(y, [2400, 2900])
 
     print("x_train count : " + str(len(X_train)))
     print("y_train count : " + str(len(y_train)))
@@ -42,25 +42,29 @@ if __name__ == "__main__":
     y_train = y_train.astype('float32')
     y_test = y_test.astype('float32')
 
+    y
+
+
+
     print("train count : " + str(X_train.shape[0]))
     print("test count : " + str(X_test.shape[0]))
 
 
 
     inputs = Input(shape=(img_rows, img_cols, 3))
-    X = Conv2D(32, kernel_size=(3, 3),
+    layer = Conv2D(32, kernel_size=(3, 3),
                activation='relu',
                input_shape=input_shape)(inputs)
-    X = MaxPooling2D(pool_size=(2, 2))(X)
-    X = Dropout(0.25)(X)
-    X = Conv2D(64, (3, 3), activation='relu')(X)
-    X = MaxPooling2D(pool_size=(2, 2))(X)
-    X = Flatten()(X)
-    X = Dense(1000, activation='relu')(X)
-    X = Dropout(0.5)(X)
+    layer = MaxPooling2D(pool_size=(2, 2))(layer)
+    layer = Dropout(0.25)(layer)
+    layer = Conv2D(64, (3, 3), activation='relu')(layer)
+    layer = MaxPooling2D(pool_size=(2, 2))(layer)
+    layer = Flatten()(layer)
+    layer = Dense(1000, activation='relu')(layer)
+    layer = Dropout(0.5)(layer)
 
-    predictions1 = Dense(1, activation='linear')(X)
-    predictions2 = Dense(1, activation='sigmoid')(X)
+    predictions1 = Dense(1, activation='linear')(layer)
+    predictions2 = Dense(1, activation='sigmoid')(layer)
 
     predictions = concatenate([predictions1, predictions2])
 
@@ -68,9 +72,6 @@ if __name__ == "__main__":
 
     optimizer = keras.optimizers.Adam(lr=learning_rate)
 
-    model.compile(loss='mse',
-                  optimizer=optimizer,
-                  metrics=['accuracy'])
 
     model.fit(X_train, y_train,
               batch_size=batch_size,
@@ -78,6 +79,9 @@ if __name__ == "__main__":
               verbose=1,
               validation_data=(X_test, y_test))
     score = model.evaluate(X_test, y_test, verbose=0)
+
+
+    b
     print('Validation Sample loss:', score[0])
     print('Validation Sample accuracy:', score[1])
 
