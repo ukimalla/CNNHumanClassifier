@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
-import codecs
-import json
+    import codecs
+    import json
 import time
 import threading
 
@@ -20,7 +20,6 @@ def load_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n_inpu
     data = data["data"]
 
     f.close()
-
 
     if n_inputs < 0:
         n_inputs = total_data
@@ -77,45 +76,36 @@ def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n
     f = codecs.open('data.json', 'r', 'utf-8-sig')
     data = json.load(f)
     f.close()
+    data = data["data"]
 
     if n_inputs < 0:
-        n_inputs = len(data["data"])
-        print (len(data["data"]))
+        n_inputs = len(data)
 
-    img_counter = 1  # counter for number of images processed
 
     startTime = time.time()
 
     path = []
 
     # Loop to iterate through JSON
-    for d in data["data"]:  # Iterating through JSON
-
-        img_counter += 1  #Incrementing img_counter
-
-        path.append("/Users/ukimalla/Downloads/imdb_crop/" + d["path"])
+    for i in range(0, n_inputs):  # Iterating through JSON
+        path.append("/Users/ukimalla/Downloads/imdb_crop/" + data[i]["path"])
 
 
-        # Calculating the prop of images successfully imported to memory
-        prop_complete = (img_counter / n_inputs) * 100
-        if prop_complete % 2 == 0:
-            print(str(prop_complete) + "% of dataset imported to memory")
-
-        # If n_inputs have been uploaded to memory
-        if img_counter > n_inputs:
-            break
-
+    # TF Variables for importing and resizing images
     filename_queue = tf.train.string_input_producer(path)
 
     image_reader = tf.WholeFileReader()
     _, image_file = image_reader.read(filename_queue)
 
-
-    image = tf.image.decode_jpeg(image_file, channels=3)
+    image = tf.image.decode_jpeg(image_file, channels=channel)
 
     image = tf.image.resize_images(image, [height, width])  # Resizing the image
 
-    # Get an image tensor and print its value.
+    y_labels = load_age_labels()
+
+    y_labels = y_labels[:n_inputs]
+    # y_labels = np.reshape(y_labels, (-1, 1))
+
     image.set_shape((height, width, 3))
 
     # Generate batch
@@ -123,10 +113,10 @@ def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n
     min_queue_examples = 10000
 
 
-    y_labels = load_y_labels(-1)
+
 
     images = tf.train.batch(
-        [image],
+        [image, y_labels],
         batch_size=n_inputs,
         num_threads=num_preprocess_threads,
         capacity=50000)
@@ -141,8 +131,7 @@ def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
 
-        image_tensor = sess.run(images)
-
+        image_tensor, y_labels = sess.run(images)
 
         # Finish off the filename queue coordinator.
         coord.request_stop()
@@ -151,18 +140,15 @@ def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n
 
     print(str(time.time() - startTime))
 
-    print(image_tensor)
-
-
     # Display all the images
     for img_counter in range(0, len(image_tensor)):
         image = tf.Session().run(tf.cast(image_tensor[img_counter], tf.uint8))
         plt.imshow(image)
-        plt.xlabel(str(data["data"][img_counter]["age"]))
+        plt.xlabel(str(y_labels[0][img_counter]))
         plt.show()
 
 
-    return np.array(image_tensor)
+    return image_tensor, y_labels
 
 
 
@@ -200,6 +186,35 @@ def load_y_labels(n_labels: int = 10000):
     return y_labels
 
 
+def load_age_labels():
+
+    # JSON
+    f = codecs.open('data.json', 'r', 'utf-8-sig')
+    data = json.load(f)
+    f.close()
+
+    y_labels = []
+    counter = 1
+    for d in data["data"]:
+        counter += 1
+        y_labels.append(d["age"])
+
+
+    y_labels = np.array(y_labels)
+    print(y_labels)
+
+    outflie = open("age_labels.npz", "wb")
+    np.savez_compressed(outflie, y_labels)
+    outflie.close()
+
+    npzfile = np.load("data.npz")
+
+    print(npzfile['arr_0'])
+    print(len(data["data"]))
+
+    return y_labels
+
+
 
 
 load_y_labels(n_labels=-1)
@@ -207,17 +222,19 @@ load_y_labels(n_labels=-1)
 size_of_npz = 10
 
 # for i in range(0, 5):
-image_array = load_imdb_data(n_inputs=size_of_npz, height=64, width=64, startIndex=size_of_npz*2)
+# image_array, label_array = load_save_imdb_data(n_inputs=size_of_npz, height=64, width=64)
     # np.savez_compressed("images part " + str(i) + ".npz", image_array)
+
+load_imdb_data(height=64, width=64, channel=3, n_inputs=10, startIndex=0)
 
 
 # image_array = load_save_imdb_data(height=64, width=64, channel=3, n_inputs=10)
 
-
-outflie = open("newdata.npz","wb")
-print("Writing to file")
-np.savez(outflie, image_array)
-outflie.close()
-print("Done Writing")
-
-
+#
+# outflie = open("newdata.npz","wb")
+# print("Writing to file")
+# np.savez(outflie, image_array)
+# outflie.close()
+# print("Done Writing")
+#
+#
