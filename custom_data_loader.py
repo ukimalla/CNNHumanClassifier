@@ -78,7 +78,7 @@ def load_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n_inpu
 def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, start_index: int = 0, n_inputs: int = 20000):
 
     json_path = "data.json"
-    imdb_path = "/home/ukimalla/Desktop/imdb_crop/"
+    imdb_path = "/Users/ukimalla/Downloads/imdb_crop/"
 
     path, y_labels = load_filtered_data(json_path, min_score1=0)
 
@@ -163,7 +163,7 @@ def load_filtered_data(json_path: str = "data.json",  min_score1: float = 0):
     data = json.load(f)
     f.close()
     data = data["data"]
-    mat_path = '/home/ukimalla/Desktop/imdb_crop/'
+    mat_path = '/Users/ukimalla/Downloads/imdb_crop/'
 
     pathList = []
     y_labels = []
@@ -270,7 +270,7 @@ def create_npz(filename: str, n_parts: int = 4, n_samples: int = -1):
         n_samples = 181483
 
     file_size = int(n_samples/n_parts)
-    for i in tqdm(range(6, n_parts)):
+    for i in tqdm(range(0, n_parts)):
         print("Processing part " + str(i + 1) + " of " + str(n_parts) + ".")
         print("Resizing images and storing in memory.")
         image_tensor, y_labels = load_save_imdb_data(height=64, width=64, channel=3, start_index=i * file_size,
@@ -278,7 +278,9 @@ def create_npz(filename: str, n_parts: int = 4, n_samples: int = -1):
         saveFileName = filename + "_" + str(i + 1) + "_of_" + str(n_parts) + ".npz"
         saveFile = open(saveFileName, 'wb')
         print("Saving data to file " + saveFileName)
-        np.savez_compressed(saveFile, x=image_tensor, y=y_labels)
+        np.savez(saveFile, x=image_tensor, y=y_labels)
         saveFile.close()
         print("Part " + str(i + 1) + " of " + str(n_parts) + " complete.")
 
+
+# create_npz("imdb", n_parts=7)
