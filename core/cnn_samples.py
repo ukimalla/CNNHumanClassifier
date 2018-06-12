@@ -4,8 +4,8 @@ from keras.layers import Input, Dense, Dropout, Flatten, concatenate
 from keras.layers import Conv2D, MaxPooling2D
 import numpy as np
 from sklearn.model_selection import train_test_split
-from core.preprocessing import to_categorical
-import matplotlib.pyplot as plt
+from core.preprocessing import to_categorical, y_age_gender_split
+
 
 
 if __name__ == "__main__":
@@ -16,30 +16,24 @@ if __name__ == "__main__":
 
     # DATA
     # Loading input data
-    data = np.load("../imdb_db_1_of_7.npz")
+    data = np.load("../imdb_1_of_7.npz")
     X = data['x']
     y = data['y']
 
+    bins = np.array([10, 20, 25, 35, 45, 55, 65, 75, 100])
 
-    y = to_categorical(y, [5, 15, 25, 35, 45, 55, 65, 75])
-    print(y)
+    y = to_categorical(y, bins)
 
     # Train test
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-    print("x_train count : " + str(len(X_train)))
-    print("y_train count : " + str(len(y_train)))
-    print("x_test count : " + str(len(X_test)))
-    print("y_test count : " + str(len(y_test)))
+
+
+    y_train_age, y_train_gender, y_test_age, y_test_gender = y_age_gender_split(y_train, y_test)
+
 
     X_train = X_train.astype('float32')
     X_test = X_test.astype('float32')
-
-    y_train = y_train.astype('float32')
-    y_test = y_test.astype('float32')
-
-    print("train count : " + str(X_train.shape[0]))
-    print("test count : " + str(X_test.shape[0]))
 
 
     # Input image dimensions
@@ -62,26 +56,26 @@ if __name__ == "__main__":
     layer = Dense(1000, activation='relu')(layer)
     layer = Dropout(0.5)(layer)
 
-    predictions1 = Dense(1, activation='linear')(layer)
+    predictions1 = Dense(len(y_test_age), activation='softmax')(layer)
     predictions2 = Dense(1, activation='sigmoid')(layer)
 
-    predictions = concatenate([predictions1, predictions2])
+    # predictions = concatenate([predictions1, predictions2])
 
-    model = Model(inputs=inputs, outputs=predictions)
+    model = Model(inputs=inputs, outputs=[predictions1, predictions2])
 
     optimizer = keras.optimizers.Adam(lr=learning_rate)
 
-    model.compile(loss="mse",
+    model.compile(loss=["categorical_crossentropy", "binary_crossentropy"],
                   optimizer=optimizer,
-                  metrics=[keras.metrics.binary_accuracy])
+                  metrics=['accuracy'])
 
 
 
-    model.fit(X_train, y_train,
+    model.fit(X_train, [y_train_age, y_train_gender],
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
-              validation_data=(X_test, y_test))
+              validation_data=(X_test, [y_test_age, y_test_gender]))
     score = model.evaluate(X_test, y_test, verbose=0)
 
     print('Validation Sample loss:', score[0])
