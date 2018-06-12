@@ -52,6 +52,7 @@ if __name__ == "__main__":
 
     # DATA
     # Loading input data
+    # Loop through each file
     for i in range(1, 8):
         data = np.load("../imdb_db_" + str(1) + "_of_7.npz")
         X = data['x']
