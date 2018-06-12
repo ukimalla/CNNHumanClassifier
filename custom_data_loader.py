@@ -282,8 +282,3 @@ def create_npz(filename: str, n_parts: int = 4, n_samples: int = -1):
         saveFile.close()
         print("Part " + str(i + 1) + " of " + str(n_parts) + " complete.")
 
-
-
-
-
-create_npz("imdb_db", n_parts=7)
