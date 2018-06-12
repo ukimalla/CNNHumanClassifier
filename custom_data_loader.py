@@ -1,9 +1,11 @@
 import tensorflow as tf
 import numpy as np
-    import codecs
-    import json
-import time
+import codecs
+import json
 import threading
+import matplotlib.image as mpimg
+
+import time
 
 import matplotlib.pyplot as plt
 
@@ -73,23 +75,22 @@ def load_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n_inpu
 
 def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n_inputs: int = 20000):
 
-    f = codecs.open('data.json', 'r', 'utf-8-sig')
-    data = json.load(f)
-    f.close()
-    data = data["data"]
+    json_path = "data.json"
+    imdb_path = "/home/ukimalla/Desktop/imdb_crop/"
+
+    path, y_labels = load_filtered_data(json_path, min_score1=0)
+
+    path = path[:n_inputs]
+    y_labels = y_labels[:n_inputs]
+
 
     if n_inputs < 0:
-        n_inputs = len(data)
-
+        n_inputs = len(path)
 
     startTime = time.time()
 
-    path = []
-
-    # Loop to iterate through JSON
-    for i in range(0, n_inputs):  # Iterating through JSON
-        path.append("/Users/ukimalla/Downloads/imdb_crop/" + data[i]["path"])
-
+    for i in range(0, len(path)):
+        path[i] = str(imdb_path) + str(path[i])
 
     # TF Variables for importing and resizing images
     filename_queue = tf.train.string_input_producer(path)
@@ -98,28 +99,23 @@ def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n
     _, image_file = image_reader.read(filename_queue)
 
     image = tf.image.decode_jpeg(image_file, channels=channel)
-
     image = tf.image.resize_images(image, [height, width])  # Resizing the image
 
-    y_labels = load_age_labels()
-
-    y_labels = y_labels[:n_inputs]
-    # y_labels = np.reshape(y_labels, (-1, 1))
-
     image.set_shape((height, width, 3))
+
 
     # Generate batch
     num_preprocess_threads = 4
     min_queue_examples = 10000
 
 
-
-
     images = tf.train.batch(
         [image, y_labels],
         batch_size=n_inputs,
         num_threads=num_preprocess_threads,
+        # shapes=[(64, 64, 3), (n_inputs, 2)],
         capacity=50000)
+
 
     # Running tf session
     with tf.Session() as sess:
@@ -144,12 +140,58 @@ def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n
     for img_counter in range(0, len(image_tensor)):
         image = tf.Session().run(tf.cast(image_tensor[img_counter], tf.uint8))
         plt.imshow(image)
-        plt.xlabel(str(y_labels[0][img_counter]))
+        plt.xlabel(str(y_labels[2][img_counter]))
         plt.show()
 
 
     return image_tensor, y_labels
 
+
+
+def load_filtered_data(json_path: str = "data.json",  min_score1: float = 0):
+
+    # Loading json to memory
+    f = codecs.open(json_path, 'r', 'utf-8-sig')
+    data = json.load(f)
+    f.close()
+    data = data["data"]
+    mat_path = '/home/ukimalla/Desktop/imdb_crop/'
+
+    pathList = []
+    y_labels = []
+
+    for d in data:
+        score1 = d["score1"]
+        score2 = d["score2"]
+        age = d["age"]
+        gender = d["gender"]
+        path = d["path"]
+
+        # Filtering through face score 1
+        if str(score1).lower() == "nan" or str(score1).lower() == "-inf"\
+                or str(score1).lower() == "inf" or score1 < min_score1:
+            continue
+
+        # Filter through face score 2 (If second score is present, skip)
+        if str(score2).lower() != "nan":
+            continue
+
+        # Filtering through age
+        if age > 100 or age < 0 \
+                or str(age).lower() == "nan":
+            continue
+
+        # Filtering through gender
+        if gender < 0 or gender > 1 \
+                or str(gender).lower == "nan":
+            continue
+
+        pathList.append(path)
+        y_labels.append([age, gender])
+
+    y_labels = np.array(y_labels)
+
+    return pathList, y_labels
 
 
 
@@ -215,18 +257,22 @@ def load_age_labels():
     return y_labels
 
 
-
-
-load_y_labels(n_labels=-1)
-
-size_of_npz = 10
+#
+#
+# load_y_labels(n_labels=-1)
+#
+# size_of_npz = 10
 
 # for i in range(0, 5):
 # image_array, label_array = load_save_imdb_data(n_inputs=size_of_npz, height=64, width=64)
     # np.savez_compressed("images part " + str(i) + ".npz", image_array)
 
-load_imdb_data(height=64, width=64, channel=3, n_inputs=10, startIndex=0)
+#load_imdb_data(height=64, width=64, channel=3, n_inputs=10, startIndex=0)
 
+
+
+
+image_tensor, y_labels = load_save_imdb_data(height=64, width=64, channel=3, n_inputs=5)
 
 # image_array = load_save_imdb_data(height=64, width=64, channel=3, n_inputs=10)
 
