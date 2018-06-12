@@ -4,32 +4,28 @@ from keras.layers import Input, Dense, Dropout, Flatten, concatenate
 from keras.layers import Conv2D, MaxPooling2D
 import numpy as np
 from sklearn.model_selection import train_test_split
+from core.preprocessing import to_categorical
+import matplotlib.pyplot as plt
 
 
 if __name__ == "__main__":
     learning_rate = 0.001
     batch_size = 128
     num_classes = 2
-    epochs = 3
+    epochs = 100
 
-
-    # Input image dimensions
-    img_rows, img_cols, channels = 64, 64, 3
-
-    input_shape = (img_cols, img_rows, channels)
-
+    # DATA
     # Loading input data
-    data = np.load("/Users/ukimalla/Downloads/data390861_part0.npz")
+    data = np.load("../imdb_db_1_of_7.npz")
     X = data['x']
     y = data['y']
-    len(y)
 
 
-
+    y = to_categorical(y, [5, 15, 25, 35, 45, 55, 65, 75])
+    print(y)
 
     # Train test
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
 
     print("x_train count : " + str(len(X_train)))
     print("y_train count : " + str(len(y_train)))
@@ -42,14 +38,17 @@ if __name__ == "__main__":
     y_train = y_train.astype('float32')
     y_test = y_test.astype('float32')
 
-    y
-
-
-
     print("train count : " + str(X_train.shape[0]))
     print("test count : " + str(X_test.shape[0]))
 
 
+    # Input image dimensions
+    img_rows, img_cols, channels = 64, 64, 3
+
+    input_shape = (img_cols, img_rows, channels)
+
+
+    # Model definition
 
     inputs = Input(shape=(img_rows, img_cols, 3))
     layer = Conv2D(32, kernel_size=(3, 3),
@@ -72,6 +71,11 @@ if __name__ == "__main__":
 
     optimizer = keras.optimizers.Adam(lr=learning_rate)
 
+    model.compile(loss="mse",
+                  optimizer=optimizer,
+                  metrics=[keras.metrics.binary_accuracy])
+
+
 
     model.fit(X_train, y_train,
               batch_size=batch_size,
@@ -80,8 +84,6 @@ if __name__ == "__main__":
               validation_data=(X_test, y_test))
     score = model.evaluate(X_test, y_test, verbose=0)
 
-
-    b
     print('Validation Sample loss:', score[0])
     print('Validation Sample accuracy:', score[1])
 
