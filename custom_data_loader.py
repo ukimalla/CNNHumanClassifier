@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import codecs
 import json
+from tqdm import tqdm
 import threading
 import matplotlib.image as mpimg
 
@@ -61,47 +62,54 @@ def load_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n_inpu
     image_array = image_array.reshape((int(image_array.shape[0] / height), height, width, 3))
     print(image_array.shape)
 
-    # Display all the images
+    # Display all the images with labels
+    # Uncomment to enable
+    # for img_counter in range(0, image_array.shape[0] - 1):
+    #     image = tf.Session().run(tf.cast(image_array[img_counter], tf.uint8))
+    #     plt.imshow(image)
+    #     plt.xlabel(str(data[img_counter]["age"]) + " " +  str(data[img_counter]["index"])\
+    #  + str(data[img_counter]["path"]))
+    #     plt.show()
+    #
+    # return image_array
 
-    for img_counter in range(0, image_array.shape[0] - 1):
-        image = tf.Session().run(tf.cast(image_array[img_counter], tf.uint8))
-        plt.imshow(image)
-        plt.xlabel(str(data[img_counter]["age"]) + " " +  str(data[img_counter]["index"]) + str(data[img_counter]["path"]))
-        plt.show()
-
-    return image_array
 
 
-
-def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n_inputs: int = 20000):
+def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, start_index: int = 0, n_inputs: int = 20000):
 
     json_path = "data.json"
     imdb_path = "/home/ukimalla/Desktop/imdb_crop/"
 
     path, y_labels = load_filtered_data(json_path, min_score1=0)
 
-    path = path[:n_inputs]
-    y_labels = y_labels[:n_inputs]
+    path = path[start_index:n_inputs + start_index]
+    y_labels = y_labels[start_index:n_inputs + start_index]
 
 
     if n_inputs < 0:
         n_inputs = len(path)
 
-    startTime = time.time()
-
     for i in range(0, len(path)):
         path[i] = str(imdb_path) + str(path[i])
 
+
+    startTime = time.time()
+
+    path_tf = tf.convert_to_tensor(path)
+    y_labels_tf = tf.convert_to_tensor(y_labels)
+
+    path, labels = tf.train.slice_input_producer([path, y_labels_tf], shuffle=False)
+
     # TF Variables for importing and resizing images
-    filename_queue = tf.train.string_input_producer(path)
+    # filename_queue = tf.train.string_input_producer([path])
 
-    image_reader = tf.WholeFileReader()
-    _, image_file = image_reader.read(filename_queue)
+    # image_reader = tf.WholeFileReader()
+    # _, image_file = image_reader.read(filename_queue)
 
-    image = tf.image.decode_jpeg(image_file, channels=channel)
-    image = tf.image.resize_images(image, [height, width])  # Resizing the image
+    image_buffer = tf.read_file(path)
 
-    image.set_shape((height, width, 3))
+    image_decode = tf.image.decode_jpeg(image_buffer, channels=channel)
+    image = tf.image.resize_images(image_decode, [height, width])  # Resizing the image
 
 
     # Generate batch
@@ -109,11 +117,12 @@ def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n
     min_queue_examples = 10000
 
 
-    images = tf.train.batch(
-        [image, y_labels],
+    image.set_shape((height, width, 3))
+
+    images, labels = tf.train.batch(
+        [image, labels],
         batch_size=n_inputs,
         num_threads=num_preprocess_threads,
-        # shapes=[(64, 64, 3), (n_inputs, 2)],
         capacity=50000)
 
 
@@ -127,21 +136,20 @@ def load_save_imdb_data(height: int = 128, width: int = 128, channel: int = 3, n
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
 
-        image_tensor, y_labels = sess.run(images)
+        image_tensor, y_labels= sess.run([images, labels])
 
         # Finish off the filename queue coordinator.
         coord.request_stop()
         coord.join(threads)
 
+    print(str(n_inputs) + "images processed in " + str(time.time() - startTime) + " seconds.")
 
-    print(str(time.time() - startTime))
-
-    # Display all the images
-    for img_counter in range(0, len(image_tensor)):
-        image = tf.Session().run(tf.cast(image_tensor[img_counter], tf.uint8))
-        plt.imshow(image)
-        plt.xlabel(str(y_labels[2][img_counter]))
-        plt.show()
+    # Display all the images(Uncomment to enable)
+    # for img_counter in range(0, len(image_tensor)):
+    #     image = tf.Session().run(tf.cast(image_tensor[img_counter], tf.uint8))
+    #     plt.imshow(image)
+    #     plt.xlabel(str(y_labels[img_counter]))
+    #     plt.show()
 
 
     return image_tensor, y_labels
@@ -257,30 +265,25 @@ def load_age_labels():
     return y_labels
 
 
-#
-#
-# load_y_labels(n_labels=-1)
-#
-# size_of_npz = 10
+def create_npz(filename: str, n_parts: int = 4, n_samples: int = -1):
+    if n_samples < 2:
+        n_samples = 181483
 
-# for i in range(0, 5):
-# image_array, label_array = load_save_imdb_data(n_inputs=size_of_npz, height=64, width=64)
-    # np.savez_compressed("images part " + str(i) + ".npz", image_array)
+    file_size = int(n_samples/n_parts)
+    for i in tqdm(range(6, n_parts)):
+        print("Processing part " + str(i + 1) + " of " + str(n_parts) + ".")
+        print("Resizing images and storing in memory.")
+        image_tensor, y_labels = load_save_imdb_data(height=64, width=64, channel=3, start_index=i * file_size,
+                                                     n_inputs=file_size)
+        saveFileName = filename + "_" + str(i + 1) + "_of_" + str(n_parts) + ".npz"
+        saveFile = open(saveFileName, 'wb')
+        print("Saving data to file " + saveFileName)
+        np.savez_compressed(saveFile, x=image_tensor, y=y_labels)
+        saveFile.close()
+        print("Part " + str(i + 1) + " of " + str(n_parts) + " complete.")
 
-#load_imdb_data(height=64, width=64, channel=3, n_inputs=10, startIndex=0)
 
 
 
 
-image_tensor, y_labels = load_save_imdb_data(height=64, width=64, channel=3, n_inputs=5)
-
-# image_array = load_save_imdb_data(height=64, width=64, channel=3, n_inputs=10)
-
-#
-# outflie = open("newdata.npz","wb")
-# print("Writing to file")
-# np.savez(outflie, image_array)
-# outflie.close()
-# print("Done Writing")
-#
-#
+create_npz("imdb_db", n_parts=7)
