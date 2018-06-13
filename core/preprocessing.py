@@ -2,7 +2,7 @@ from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 import matplotlib.pyplot as plt
 
-def to_categorical(y_labels, bins):
+def to_categorical(y_labels, bins, exam: bool = False):
     y_age = y_labels[:, 0]
     y_gender = y_labels[:, 1].astype('float32')
 
@@ -13,6 +13,9 @@ def to_categorical(y_labels, bins):
 
     ohe = OneHotEncoder()
     y_age = ohe.fit_transform(y_age).toarray()
+
+    if exam:
+        return y_age, y_gender
 
     y_labels = []
 
